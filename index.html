@@ -2,28 +2,127 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>電圧降下計算ツール</title>
+  <title>電圧降下 組合せ最適化ツール</title>
 </head>
 <body>
-  <h1>電圧降下計算</h1>
-  <label>電流 (A): <input id="current" type="number" /></label><br>
-  <label>距離 (m): <input id="distance" type="number" /></label><br>
-  <label>抵抗 R (Ω/km): <input id="resistance" type="number" /></label><br>
-  <label>力率 cosθ: <input id="cos" type="number" value="0.9" step="0.01" /></label><br>
-  <button onclick="calc()">計算</button>
-  <p id="result"></p>
+  <h2>電圧降下 組合せ最適化ツール（CVT/F/IV対応）</h2>
+
+  <label>ケーブルの種類:
+    <select id="cableType">
+      <option value="CVT">CVT</option>
+      <option value="F">Fケーブル</option>
+      <option value="IV">IV</option>
+    </select>
+  </label><br>
+
+  <label>電流 I (A): <input id="current" type="number" /></label><br>
+  <label>力率 cosθ: <input id="cos" type="number" step="0.01" value="0.9" /></label><br>
+  <label>許容電圧降下 (V): <input id="maxDrop" type="number" value="6" /></label><br>
+  <label><input type="checkbox" id="showFormula" /> 途中式を表示</label><br><br>
+
+  <label>分電盤間の距離（カンマ区切り, 単位m）:<br>
+    <input id="distances" style="width: 300px;" placeholder="例: 30,40,50">
+  </label><br><br>
+
+  <button onclick="optimize()">最適化計算</button>
+  <pre id="result"></pre>
 
   <script>
-    function calc() {
-      let I = parseFloat(document.getElementById("current").value);
-      let L = parseFloat(document.getElementById("distance").value) / 1000;
-      let R = parseFloat(document.getElementById("resistance").value);
-      let cos = parseFloat(document.getElementById("cos").value);
-      let sin = Math.sqrt(1 - cos * cos);
-      let K1 = 2; // 単相2線式と仮定
+    const cableSets = {
+      CVT: [
+        { name: "CVT 60sq", R: 0.491, X: 0.072, Imax: 150 },
+        { name: "CVT 38sq", R: 0.785, X: 0.083, Imax: 115 },
+        { name: "CVT 22sq", R: 1.36, X: 0.108, Imax: 79 },
+        { name: "CVT 14sq", R: 2.35, X: 0.145, Imax: 55 }
+      ],
+      F: [
+        { name: "Fケーブル 2.6x3", R: 4.46, X: 0.08, Imax: 30 }
+      ],
+      IV: [
+        { name: "IV 100sq", R: 0.226, X: 0.05, Imax: 200 },
+        { name: "IV 60sq", R: 0.361, X: 0.06, Imax: 150 },
+        { name: "IV 38sq", R: 0.585, X: 0.07, Imax: 120 },
+        { name: "IV 22sq", R: 1.04, X: 0.09, Imax: 85 },
+        { name: "IV 14sq", R: 1.65, X: 0.12, Imax: 60 }
+      ]
+    };
 
-      let drop = K1 * I * (R * cos) * L;
-      document.getElementById("result").innerText = `電圧降下: ${drop.toFixed(2)} V`;
+    function optimize() {
+      const cableType = document.getElementById("cableType").value;
+      const cables = cableSets[cableType];
+
+      const I = parseFloat(document.getElementById("current").value);
+      const cos = parseFloat(document.getElementById("cos").value);
+      const sin = Math.sqrt(1 - cos * cos);
+      const maxDrop = parseFloat(document.getElementById("maxDrop").value);
+      const distances = document.getElementById("distances").value
+        .split(",").map(d => parseFloat(d.trim()) / 1000); // km
+
+      const K1 = 2; // 単相前提
+      const showFormula = document.getElementById("showFormula").checked;
+
+      const sectionCount = distances.length;
+      const totalCombos = Math.pow(cables.length, sectionCount);
+
+      let best = null;
+      let bestScore = Infinity;
+
+      for (let n = 0; n < totalCombos; n++) {
+        let indices = [];
+        let tmp = n;
+        for (let i = 0; i < sectionCount; i++) {
+          indices.push(tmp % cables.length);
+          tmp = Math.floor(tmp / cables.length);
+        }
+
+        // 太→細の順チェック
+        let validOrder = true;
+        for (let i = 0; i < sectionCount - 1; i++) {
+          if (cables[indices[i]].Imax < cables[indices[i + 1]].Imax) {
+            validOrder = false;
+            break;
+          }
+        }
+        if (!validOrder) continue;
+
+        let totalDrop = 0;
+        let ok = true;
+        for (let i = 0; i < sectionCount; i++) {
+          const c = cables[indices[i]];
+          const L = distances[i];
+          if (c.Imax < I) {
+            ok = false;
+            break;
+          }
+          const drop = K1 * I * (c.R * cos + c.X * sin) * L;
+          totalDrop += drop;
+        }
+
+        if (ok && totalDrop <= maxDrop) {
+          let score = indices.reduce((sum, idx) => sum + cables[idx].Imax, 0);
+          if (score < bestScore) {
+            best = { indices, totalDrop };
+            bestScore = score;
+          }
+        }
+      }
+
+      const result = document.getElementById("result");
+      if (!best) {
+        result.textContent = "該当する組合せが見つかりませんでした。";
+      } else {
+        let output = `最適な組合せ（電圧降下合計: ${best.totalDrop.toFixed(2)} V）\n`;
+        best.indices.forEach((idx, i) => {
+          const c = cables[idx];
+          const L = distances[i];
+          const drop = K1 * I * (c.R * cos + c.X * sin) * L;
+          output += `区間 ${i + 1}: ${c.name}\n`;
+          if (showFormula) {
+            output += `  式: ${K1} × ${I} × (${c.R}×${cos} + ${c.X}×${sin.toFixed(3)}) × ${L.toFixed(3)}km = ${drop.toFixed(2)} V\n`;
+          }
+        });
+        result.textContent = output;
+      }
     }
   </script>
 </body>
