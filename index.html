@@ -31,9 +31,8 @@
   </label>
 
   <label>電流 I (A): <input id="current" type="number" value="60" /></label>
-<label>力率 cosθ: <input id="cos" type="number" step="0.01" value="1" /></label>
-<label>許容電圧降下 (V): <input id="maxDrop" type="number" value="15" /></label>
-
+  <label>力率 cosθ: <input id="cos" type="number" step="0.01" value="1" /></label>
+  <label>許容電圧降下 (V): <input id="maxDrop" type="number" value="15" /></label>
   <label><input type="checkbox" id="showFormula" /> 途中式を表示</label>
 
   <label>分電盤間の距離（カンマ区切り, 単位m）:<br>
@@ -48,21 +47,24 @@
   <script>
     const cableSets = {
       CVT: [
-        { name: "CVT 60sq", R: 0.491, X: 0.072, Imax: 150 },
-        { name: "CVT 38sq", R: 0.785, X: 0.083, Imax: 115 },
-        { name: "CVT 22sq", R: 1.36, X: 0.108, Imax: 79 },
-        { name: "CVT 14sq", R: 2.35, X: 0.145, Imax: 55 },
-        { name: "CVT 8sq",  R: 2.33, X: 0.08,  Imax: 48 }
+        { name: "CVT 8sq",    R: 2.33,  X: 0.08,  Imax: 60 },
+        { name: "CVT 14sq",   R: 1.43,  X: 0.07,  Imax: 75 },
+        { name: "CVT 22sq",   R: 0.906, X: 0.065, Imax: 100 },
+        { name: "CVT 38sq",   R: 0.553, X: 0.06,  Imax: 150 },
+        { name: "CVT 60sq",   R: 0.361, X: 0.055, Imax: 200 },
+        { name: "CVT 100sq",  R: 0.227, X: 0.05,  Imax: 250 }
       ],
       F: [
-        { name: "Fケーブル 2.6x3", R: 4.46, X: 0.08, Imax: 30 }
+        { name: "Fケーブル2.6x3", R: 8.21, X: 0.08, Imax: 30 }
       ],
       IV: [
-        { name: "IV 100sq", R: 0.226, X: 0.05, Imax: 200 },
-        { name: "IV 60sq", R: 0.361, X: 0.06, Imax: 150 },
-        { name: "IV 38sq", R: 0.585, X: 0.07, Imax: 120 },
-        { name: "IV 22sq", R: 1.04, X: 0.09, Imax: 85 },
-        { name: "IV 14sq", R: 1.65, X: 0.12, Imax: 60 }
+        { name: "IV 5.5sq",   R: 3.38,  X: 0.09,  Imax: 41 },
+        { name: "IV 8sq",     R: 2.31,  X: 0.08,  Imax: 55 },
+        { name: "IV 14sq",    R: 1.24,  X: 0.07,  Imax: 80 },
+        { name: "IV 22sq",    R: 0.874, X: 0.065, Imax: 105 },
+        { name: "IV 38sq",    R: 0.552, X: 0.06,  Imax: 145 },
+        { name: "IV 60sq",    R: 0.361, X: 0.055, Imax: 185 },
+        { name: "IV 100sq",   R: 0.229, X: 0.05,  Imax: 245 }
       ]
     };
 
@@ -81,7 +83,7 @@
 
       let K1 = 2;
       if (voltageType === "三相3線式") K1 = Math.sqrt(3);
-      if (voltageType === "単相3線式") K1 = 1; // ← 過去の要望対応
+      if (voltageType === "単相3線式") K1 = 1;
 
       const sectionCount = distances.length;
       const totalCombos = Math.pow(cables.length, sectionCount);
