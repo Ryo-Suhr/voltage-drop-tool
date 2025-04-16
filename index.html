@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>電圧降下計算ツール</title>
+</head>
+<body>
+  <h1>電圧降下計算</h1>
+  <label>電流 (A): <input id="current" type="number" /></label><br>
+  <label>距離 (m): <input id="distance" type="number" /></label><br>
+  <label>抵抗 R (Ω/km): <input id="resistance" type="number" /></label><br>
+  <label>力率 cosθ: <input id="cos" type="number" value="0.9" step="0.01" /></label><br>
+  <button onclick="calc()">計算</button>
+  <p id="result"></p>
+
+  <script>
+    function calc() {
+      let I = parseFloat(document.getElementById("current").value);
+      let L = parseFloat(document.getElementById("distance").value) / 1000;
+      let R = parseFloat(document.getElementById("resistance").value);
+      let cos = parseFloat(document.getElementById("cos").value);
+      let sin = Math.sqrt(1 - cos * cos);
+      let K1 = 2; // 単相2線式と仮定
+
+      let drop = K1 * I * (R * cos) * L;
+      document.getElementById("result").innerText = `電圧降下: ${drop.toFixed(2)} V`;
+    }
+  </script>
+</body>
+</html>
