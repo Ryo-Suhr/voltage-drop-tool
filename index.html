@@ -12,7 +12,7 @@
   </style>
 </head>
 <body>
-  <h2>電圧降下 組合せ最適化ツール（スマホ対応版）</h2>
+  <h2>電圧降下 組合せ最適化ツール</h2>
 
   <label>電圧方式:
     <select id="voltageType">
@@ -50,7 +50,8 @@
         { name: "CVT 60sq", R: 0.491, X: 0.072, Imax: 150 },
         { name: "CVT 38sq", R: 0.785, X: 0.083, Imax: 115 },
         { name: "CVT 22sq", R: 1.36, X: 0.108, Imax: 79 },
-        { name: "CVT 14sq", R: 2.35, X: 0.145, Imax: 55 }
+        { name: "CVT 14sq", R: 2.35, X: 0.145, Imax: 55 },
+        { name: "CVT 8sq",  R: 2.33, X: 0.08,  Imax: 48 }
       ],
       F: [
         { name: "Fケーブル 2.6x3", R: 4.46, X: 0.08, Imax: 30 }
@@ -79,6 +80,7 @@
 
       let K1 = 2;
       if (voltageType === "三相3線式") K1 = Math.sqrt(3);
+      if (voltageType === "単相3線式") K1 = 1; // ← 過去の要望対応
 
       const sectionCount = distances.length;
       const totalCombos = Math.pow(cables.length, sectionCount);
