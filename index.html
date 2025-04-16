@@ -3,9 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <title>電圧降下 組合せ最適化ツール</title>
+  <style>
+    body { font-family: sans-serif; line-height: 1.5; padding: 1em; }
+    label { display: block; margin: 6px 0; }
+    input, select { margin-left: 5px; }
+    pre { background: #f3f3f3; padding: 1em; white-space: pre-wrap; border: 1px solid #ccc; }
+    .section-title { margin-top: 20px; font-weight: bold; border-bottom: 1px solid #ccc; }
+  </style>
 </head>
 <body>
-  <h2>電圧降下 組合せ最適化ツール（CVT/F/IV対応）</h2>
+  <h2>電圧降下 組合せ最適化ツール（スマホ対応版）</h2>
+
+  <label>電圧方式:
+    <select id="voltageType">
+      <option value="単相2線式">単相2線式</option>
+      <option value="単相3線式">単相3線式</option>
+      <option value="三相3線式">三相3線式</option>
+    </select>
+  </label>
 
   <label>ケーブルの種類:
     <select id="cableType">
@@ -13,19 +28,21 @@
       <option value="F">Fケーブル</option>
       <option value="IV">IV</option>
     </select>
-  </label><br>
+  </label>
 
-  <label>電流 I (A): <input id="current" type="number" /></label><br>
-  <label>力率 cosθ: <input id="cos" type="number" step="0.01" value="0.9" /></label><br>
-  <label>許容電圧降下 (V): <input id="maxDrop" type="number" value="6" /></label><br>
-  <label><input type="checkbox" id="showFormula" /> 途中式を表示</label><br><br>
+  <label>電流 I (A): <input id="current" type="number" /></label>
+  <label>力率 cosθ: <input id="cos" type="number" step="0.01" value="0.9" /></label>
+  <label>許容電圧降下 (V): <input id="maxDrop" type="number" value="6" /></label>
+  <label><input type="checkbox" id="showFormula" /> 途中式を表示</label>
 
   <label>分電盤間の距離（カンマ区切り, 単位m）:<br>
     <input id="distances" style="width: 300px;" placeholder="例: 30,40,50">
-  </label><br><br>
+  </label>
 
   <button onclick="optimize()">最適化計算</button>
-  <pre id="result"></pre>
+
+  <div class="section-title">結果</div>
+  <pre id="result">ここに最適なケーブル組合せが表示されます。</pre>
 
   <script>
     const cableSets = {
@@ -48,6 +65,7 @@
     };
 
     function optimize() {
+      const voltageType = document.getElementById("voltageType").value;
       const cableType = document.getElementById("cableType").value;
       const cables = cableSets[cableType];
 
@@ -57,9 +75,10 @@
       const maxDrop = parseFloat(document.getElementById("maxDrop").value);
       const distances = document.getElementById("distances").value
         .split(",").map(d => parseFloat(d.trim()) / 1000); // km
-
-      const K1 = 2; // 単相前提
       const showFormula = document.getElementById("showFormula").checked;
+
+      let K1 = 2;
+      if (voltageType === "三相3線式") K1 = Math.sqrt(3);
 
       const sectionCount = distances.length;
       const totalCombos = Math.pow(cables.length, sectionCount);
@@ -111,14 +130,17 @@
       if (!best) {
         result.textContent = "該当する組合せが見つかりませんでした。";
       } else {
-        let output = `最適な組合せ（電圧降下合計: ${best.totalDrop.toFixed(2)} V）\n`;
+        let output = `【最適な組合せ】（電圧降下合計: ${best.totalDrop.toFixed(2)} V）\n\n`;
         best.indices.forEach((idx, i) => {
           const c = cables[idx];
           const L = distances[i];
           const drop = K1 * I * (c.R * cos + c.X * sin) * L;
-          output += `区間 ${i + 1}: ${c.name}\n`;
+          output += `■ 区間 ${i + 1}：${c.name}\n`;
           if (showFormula) {
-            output += `  式: ${K1} × ${I} × (${c.R}×${cos} + ${c.X}×${sin.toFixed(3)}) × ${L.toFixed(3)}km = ${drop.toFixed(2)} V\n`;
+            output += `  → ${K1.toFixed(3)} × ${I} × (${c.R}×${cos} + ${c.X}×${sin.toFixed(3)}) × ${L.toFixed(3)} km\n`;
+            output += `  = ${drop.toFixed(2)} V\n\n`;
+          } else {
+            output += `  → 電圧降下 = ${drop.toFixed(2)} V\n\n`;
           }
         });
         result.textContent = output;
